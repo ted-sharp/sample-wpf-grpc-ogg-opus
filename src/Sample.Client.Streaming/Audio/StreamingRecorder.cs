@@ -6,6 +6,7 @@ using Concentus.Structs;
 using MagicOnion;
 using NAudio.Wave;
 using Sample.Shared;
+using Sample.Shared.Audio;
 using Sample.Shared.Dto;
 
 namespace Sample.Client.Streaming.Audio
@@ -21,10 +22,17 @@ namespace Sample.Client.Streaming.Audio
         private OpusOggWriteStream _oggWriter;
         private ChunkForwardStream _forwardStream;
         private ClientStreamingResult<RecordingChunk, RecordingResult> _streamCall;
+        private VadGate _vadGate;
         private DateTime _startUtc;
         private TaskCompletionSource<object> _stopTcs;
 
         public bool IsRecording { get; private set; }
+
+        /// <summary>VAD で無音区間をカットするか。StartAsync 前に設定すること。</summary>
+        public bool EnableVad { get; set; }
+
+        /// <summary>WebRTC VAD のアグレッシブ度 (0..3、3 が最も厳しい)。StartAsync 前に設定すること。</summary>
+        public int VadAggressiveness { get; set; } = 2;
 
         public TimeSpan Elapsed => IsRecording ? DateTime.UtcNow - _startUtc : TimeSpan.Zero;
 
@@ -52,6 +60,8 @@ namespace Sample.Client.Streaming.Audio
                     .ConfigureAwait(false);
             });
             _oggWriter = new OpusOggWriteStream(_encoder, _forwardStream);
+
+            _vadGate = EnableVad ? new VadGate(VadAggressiveness) : null;
 
             // OpusOggWriteStream 構築時に OpusHead/OpusTags が ChunkForwardStream に書かれているはずなので、
             // 即フラッシュして gRPC ストリームに最初の WriteAsync を打ち込んでおく。これで遅延起動による
@@ -92,7 +102,14 @@ namespace Sample.Client.Streaming.Audio
                 int sampleCount = e.BytesRecorded / AudioConstants.BytesPerSample;
                 short[] pcm = new short[sampleCount];
                 Buffer.BlockCopy(e.Buffer, 0, pcm, 0, e.BytesRecorded);
-                _oggWriter.WriteSamples(pcm, 0, sampleCount);
+                if (_vadGate != null)
+                {
+                    _vadGate.Process(pcm, sampleCount, (buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+                }
+                else
+                {
+                    _oggWriter.WriteSamples(pcm, 0, sampleCount);
+                }
             }
             catch (Exception ex)
             {
@@ -108,6 +125,13 @@ namespace Sample.Client.Streaming.Audio
             string lastStep = "(start)";
             try
             {
+                lastStep = "VadGate.Flush";
+                System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] {lastStep}");
+                // VAD ゲートが Open 状態のまま録音終了した場合の端数フレームを吐き出す。
+                // Finish() の後に WriteSamples を呼ぶと内部 Stream が Close 済みで死ぬので
+                // 必ず Finish() の前に行う。
+                _vadGate?.Flush((buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+
                 lastStep = "OggWriter.Finish";
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] {lastStep}");
                 // OpusOggWriteStream.Finish() は内部で _outputStream.Flush() + Close() を
@@ -162,6 +186,8 @@ namespace Sample.Client.Streaming.Audio
         {
             try { _waveIn?.Dispose(); } catch { }
             _waveIn = null;
+            try { _vadGate?.Dispose(); } catch { }
+            _vadGate = null;
             try { _forwardStream?.Dispose(); } catch { }
             _forwardStream = null;
             try { _streamCall.Dispose(); } catch { }

@@ -6,6 +6,7 @@ using Concentus.Oggfile;
 using Concentus.Structs;
 using NAudio.Wave;
 using Sample.Shared;
+using Sample.Shared.Audio;
 using Sample.Shared.Dto;
 
 namespace Sample.Client.Unary.Audio
@@ -20,11 +21,18 @@ namespace Sample.Client.Unary.Audio
         private OpusEncoder _encoder;
         private OpusOggWriteStream _oggWriter;
         private MemoryStream _buffer;
+        private VadGate _vadGate;
         private IRecordingService _service;
         private DateTime _startUtc;
         private TaskCompletionSource<object> _stopTcs;
 
         public bool IsRecording { get; private set; }
+
+        /// <summary>VAD で無音区間をカットするか。StartAsync 前に設定すること。</summary>
+        public bool EnableVad { get; set; }
+
+        /// <summary>WebRTC VAD のアグレッシブ度 (0..3、3 が最も厳しい)。StartAsync 前に設定すること。</summary>
+        public int VadAggressiveness { get; set; } = 2;
 
         public TimeSpan Elapsed => IsRecording ? DateTime.UtcNow - _startUtc : TimeSpan.Zero;
 
@@ -41,6 +49,8 @@ namespace Sample.Client.Unary.Audio
 
             _buffer = new MemoryStream();
             _oggWriter = new OpusOggWriteStream(_encoder, _buffer);
+
+            _vadGate = EnableVad ? new VadGate(VadAggressiveness) : null;
 
             _waveIn = new WaveInEvent
             {
@@ -76,7 +86,14 @@ namespace Sample.Client.Unary.Audio
                 int sampleCount = e.BytesRecorded / AudioConstants.BytesPerSample;
                 short[] pcm = new short[sampleCount];
                 Buffer.BlockCopy(e.Buffer, 0, pcm, 0, e.BytesRecorded);
-                _oggWriter.WriteSamples(pcm, 0, sampleCount);
+                if (_vadGate != null)
+                {
+                    _vadGate.Process(pcm, sampleCount, (buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+                }
+                else
+                {
+                    _oggWriter.WriteSamples(pcm, 0, sampleCount);
+                }
             }
             catch (Exception ex)
             {
@@ -90,7 +107,10 @@ namespace Sample.Client.Unary.Audio
             Exception captured = null;
             try
             {
-                // 1) Ogg トレーラを書き出す。残サンプルがパディングされて _buffer に書き込まれる。
+                // 1) VAD ゲートが Open 状態の端数フレームを先に吐き出す (Finish 後は WriteSamples 不可)。
+                _vadGate?.Flush((buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+
+                // 2) Ogg トレーラを書き出す。残サンプルがパディングされて _buffer に書き込まれる。
                 _oggWriter?.Finish();
 
                 // 2) MemoryStream の中身を独立した byte[] にコピー (この後 _buffer を Dispose しても安全)。
@@ -137,6 +157,8 @@ namespace Sample.Client.Unary.Audio
         {
             try { _waveIn?.Dispose(); } catch { }
             _waveIn = null;
+            try { _vadGate?.Dispose(); } catch { }
+            _vadGate = null;
             try { _buffer?.Dispose(); } catch { }
             _buffer = null;
             _oggWriter = null;

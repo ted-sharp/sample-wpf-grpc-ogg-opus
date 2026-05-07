@@ -11,6 +11,10 @@ namespace Sample.Client.Unary
         private System.Windows.Forms.TrackBar tbSeek;
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Label lblTime;
+        private System.Windows.Forms.CheckBox chkRemoveSilence;
+        private System.Windows.Forms.Label lblVadCaption;
+        private System.Windows.Forms.TrackBar tbVadAggressiveness;
+        private System.Windows.Forms.Label lblVadAggressiveness;
 
         private void InitializeComponent()
         {
@@ -21,7 +25,12 @@ namespace Sample.Client.Unary
             this.tbSeek = new System.Windows.Forms.TrackBar();
             this.lblStatus = new System.Windows.Forms.Label();
             this.lblTime = new System.Windows.Forms.Label();
+            this.chkRemoveSilence = new System.Windows.Forms.CheckBox();
+            this.lblVadCaption = new System.Windows.Forms.Label();
+            this.tbVadAggressiveness = new System.Windows.Forms.TrackBar();
+            this.lblVadAggressiveness = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.tbSeek)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.tbVadAggressiveness)).BeginInit();
             this.SuspendLayout();
             //
             // btnRecord
@@ -94,11 +103,55 @@ namespace Sample.Client.Unary
             this.lblStatus.TabIndex = 6;
             this.lblStatus.Text = "状態: 待機中";
             //
+            // chkRemoveSilence
+            //
+            this.chkRemoveSilence.AutoSize = true;
+            this.chkRemoveSilence.Location = new System.Drawing.Point(12, 162);
+            this.chkRemoveSilence.Name = "chkRemoveSilence";
+            this.chkRemoveSilence.Size = new System.Drawing.Size(150, 22);
+            this.chkRemoveSilence.TabIndex = 7;
+            this.chkRemoveSilence.Text = "無音をカットする (VAD)";
+            this.chkRemoveSilence.UseVisualStyleBackColor = true;
+            //
+            // lblVadCaption
+            //
+            this.lblVadCaption.AutoSize = true;
+            this.lblVadCaption.Location = new System.Drawing.Point(190, 165);
+            this.lblVadCaption.Name = "lblVadCaption";
+            this.lblVadCaption.Size = new System.Drawing.Size(40, 18);
+            this.lblVadCaption.TabIndex = 8;
+            this.lblVadCaption.Text = "精度:";
+            //
+            // tbVadAggressiveness
+            //
+            this.tbVadAggressiveness.Location = new System.Drawing.Point(232, 158);
+            this.tbVadAggressiveness.Maximum = 3;
+            this.tbVadAggressiveness.Minimum = 0;
+            this.tbVadAggressiveness.Name = "tbVadAggressiveness";
+            this.tbVadAggressiveness.Size = new System.Drawing.Size(160, 45);
+            this.tbVadAggressiveness.TabIndex = 9;
+            this.tbVadAggressiveness.TickFrequency = 1;
+            this.tbVadAggressiveness.Value = 2;
+            this.tbVadAggressiveness.ValueChanged += new System.EventHandler(this.tbVadAggressiveness_ValueChanged);
+            //
+            // lblVadAggressiveness
+            //
+            this.lblVadAggressiveness.AutoSize = true;
+            this.lblVadAggressiveness.Location = new System.Drawing.Point(400, 165);
+            this.lblVadAggressiveness.Name = "lblVadAggressiveness";
+            this.lblVadAggressiveness.Size = new System.Drawing.Size(60, 18);
+            this.lblVadAggressiveness.TabIndex = 10;
+            this.lblVadAggressiveness.Text = "強め";
+            //
             // MainForm
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(490, 170);
+            this.ClientSize = new System.Drawing.Size(490, 215);
+            this.Controls.Add(this.lblVadAggressiveness);
+            this.Controls.Add(this.tbVadAggressiveness);
+            this.Controls.Add(this.lblVadCaption);
+            this.Controls.Add(this.chkRemoveSilence);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.lblTime);
             this.Controls.Add(this.tbSeek);
@@ -111,6 +164,7 @@ namespace Sample.Client.Unary
             this.Name = "MainForm";
             this.Text = "Sample.Client.Unary (Unary)";
             ((System.ComponentModel.ISupportInitialize)(this.tbSeek)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.tbVadAggressiveness)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
         }

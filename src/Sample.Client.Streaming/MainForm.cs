@@ -30,7 +30,24 @@ namespace Sample.Client.Streaming
             _uiTimer.Tick += UiTimer_Tick;
             _uiTimer.Start();
 
+            UpdateVadLabel();
             UpdateUi();
+        }
+
+        private void tbVadAggressiveness_ValueChanged(object sender, EventArgs e)
+        {
+            UpdateVadLabel();
+        }
+
+        private void UpdateVadLabel()
+        {
+            switch (tbVadAggressiveness.Value)
+            {
+                case 0: lblVadAggressiveness.Text = "ゆるめ"; break;
+                case 1: lblVadAggressiveness.Text = "ふつう"; break;
+                case 2: lblVadAggressiveness.Text = "強め"; break;
+                case 3: lblVadAggressiveness.Text = "最強"; break;
+            }
         }
 
         private async void btnRecord_Click(object sender, EventArgs e)
@@ -43,6 +60,8 @@ namespace Sample.Client.Streaming
                 SetStatus("サーバー接続中...");
                 await _rpc.ConnectAsync();
                 SetStatus("録音開始中...");
+                _recorder.EnableVad = chkRemoveSilence.Checked;
+                _recorder.VadAggressiveness = tbVadAggressiveness.Value;
                 await _recorder.StartAsync(_rpc.Service);
                 SetStatus("録音中");
                 UpdateUi();
@@ -237,6 +256,8 @@ namespace Sample.Client.Streaming
             btnPause.Enabled = !recording && playing;
             btnStop.Enabled = recording || playing || paused;
             tbSeek.Enabled = !recording && loaded;
+            chkRemoveSilence.Enabled = !recording;
+            tbVadAggressiveness.Enabled = !recording;
         }
 
         private void SetStatus(string text)

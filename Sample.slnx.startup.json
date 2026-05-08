@@ -63,6 +63,19 @@
         "Sample.Client.Unary": {},
         "Sample.Server": {}
       }
+    },
+    "Server + Client(Stt)": {
+      "Projects": {
+        "Sample.Client.Stt": {},
+        "Sample.Server": {}
+      }
+    },
+    "Server + Client(Unary) + Client(Stt)": {
+      "Projects": {
+        "Sample.Client.Unary": {},
+        "Sample.Client.Stt": {},
+        "Sample.Server": {}
+      }
     }
   }
 }

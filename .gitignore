@@ -655,9 +655,11 @@ web/_tmp/
 **/*.onnx
 **/*.ort
 
-# sherpa-onnx / Moonshine モデル（ダウンロードスクリプトで取得）
-models/**/tokens.txt
-models/moonshine-base-ja/
+# sherpa-onnx / Moonshine / Whisper モデル（task download-models で取得）
+/models/
+
+# go-task のローカルキャッシュ
+.task/
 
 # =========================================
 # Kanock.ignore

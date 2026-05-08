@@ -1,0 +1,80 @@
+version: '3'
+
+# go-task (https://taskfile.dev) で実行する。
+# Windows へのインストール例: scoop install task / winget install Task.Task
+#
+# 主要タスク:
+#   task init             : 初回セットアップ (モデル取得 + ビルド) を一括実行
+#   task download-models  : Sherpa-onnx 用モデルを models/ 配下にダウンロード
+#   task build            : ソリューション全体をビルド
+#   task run-server       : サーバー起動
+#   task run-stt          : STT クライアント起動
+
+vars:
+  MODELS_DIR: '{{.TASKFILE_DIR}}/models'
+  MOONSHINE_NAME: 'sherpa-onnx-moonshine-base-ja-quantized-2026-02-27'
+  MOONSHINE_URL: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/{{.MOONSHINE_NAME}}.tar.bz2'
+  WHISPER_DIR: '{{.MODELS_DIR}}/sherpa-onnx-whisper-large-v3'
+  WHISPER_BASE_URL: 'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-large-v3/resolve/main'
+
+tasks:
+  init:
+    desc: '初回セットアップ: STT モデル取得 + ソリューション全体ビルド'
+    deps:
+      - download-models
+      - build
+
+  download-models:
+    desc: 'STT モデル一式 (Moonshine ja + Whisper large-v3) をダウンロード'
+    deps:
+      - download-moonshine
+      - download-whisper
+
+  download-moonshine:
+    desc: 'Moonshine ja base モデルを取得・展開 (~135MB)'
+    sources:
+      - Taskfile.yml
+    generates:
+      - '{{.MODELS_DIR}}/{{.MOONSHINE_NAME}}/tokens.txt'
+    cmds:
+      - powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '{{.MODELS_DIR}}' | Out-Null"
+      - powershell -NoProfile -Command "Invoke-WebRequest -Uri '{{.MOONSHINE_URL}}' -OutFile '{{.MODELS_DIR}}/{{.MOONSHINE_NAME}}.tar.bz2'"
+      - powershell -NoProfile -Command "tar -xjf '{{.MODELS_DIR}}/{{.MOONSHINE_NAME}}.tar.bz2' -C '{{.MODELS_DIR}}'"
+      - powershell -NoProfile -Command "Remove-Item '{{.MODELS_DIR}}/{{.MOONSHINE_NAME}}.tar.bz2'"
+
+  download-whisper:
+    desc: 'Whisper large-v3 int8 を取得 (~1.8GB、時間がかかる)'
+    sources:
+      - Taskfile.yml
+    generates:
+      - '{{.WHISPER_DIR}}/large-v3-tokens.txt'
+    cmds:
+      - powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '{{.WHISPER_DIR}}' | Out-Null"
+      - powershell -NoProfile -Command "Invoke-WebRequest -Uri '{{.WHISPER_BASE_URL}}/large-v3-encoder.int8.onnx' -OutFile '{{.WHISPER_DIR}}/large-v3-encoder.int8.onnx'"
+      - powershell -NoProfile -Command "Invoke-WebRequest -Uri '{{.WHISPER_BASE_URL}}/large-v3-decoder.int8.onnx' -OutFile '{{.WHISPER_DIR}}/large-v3-decoder.int8.onnx'"
+      - powershell -NoProfile -Command "Invoke-WebRequest -Uri '{{.WHISPER_BASE_URL}}/large-v3-tokens.txt' -OutFile '{{.WHISPER_DIR}}/large-v3-tokens.txt'"
+
+  build:
+    desc: 'ソリューション全体ビルド'
+    cmds:
+      - dotnet build Sample.slnx
+
+  run-server:
+    desc: 'サーバー起動 (h2c, :5000)'
+    cmds:
+      - dotnet run --project src/Sample.Server/Sample.Server.csproj
+
+  run-stt:
+    desc: 'STT クライアント起動 (要: サーバー先行起動 & download-models 完了)'
+    cmds:
+      - dotnet run --project src/Sample.Client.Stt/Sample.Client.Stt.csproj
+
+  run-streaming:
+    desc: 'ClientStreaming クライアント起動'
+    cmds:
+      - dotnet run --project src/Sample.Client.Streaming/Sample.Client.Streaming.csproj
+
+  run-unary:
+    desc: 'Unary クライアント起動'
+    cmds:
+      - dotnet run --project src/Sample.Client.Unary/Sample.Client.Unary.csproj

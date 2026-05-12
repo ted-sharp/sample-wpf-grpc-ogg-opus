@@ -1,4 +1,4 @@
-# forms-grpc-ogg-opus-sample 仕様書
+# sample-wpf-grpc-ogg-opus 仕様書
 
 ## 1. 概要
 
@@ -34,7 +34,7 @@ NAudio で録音した音声を Concentus で Opus エンコードし、MagicOni
 ## 3. プロジェクト構成
 
 ```
-forms-grpc-ogg-opus-sample/
+sample-wpf-grpc-ogg-opus/
 ├── Sample.slnx                          (.NET 10 SDK の XML 形式ソリューション)
 └── src/
     ├── Sample.Shared/                   netstandard2.0   サービス契約 + DTO + VadGate + AudioConstants

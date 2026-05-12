@@ -1,4 +1,4 @@
-# forms-grpc-ogg-opus-sample
+# sample-wpf-grpc-ogg-opus
 
 WinForms から録音した音声を Ogg Opus に変換し、MagicOnion (gRPC) でサーバーに送って保存するサンプル。
 
